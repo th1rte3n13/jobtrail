@@ -20,6 +20,7 @@ const EMPTY_VALUES: FormValues = {
   visa_notes: "",
   requirements: "",
   notes: "",
+  advert_text: "",
 };
 
 type ApplicationFormProps = {
@@ -29,6 +30,8 @@ type ApplicationFormProps = {
   ) => Promise<ApplicationFormState>;
   initialValues?: FormValues;
   submitLabel: string;
+  // Called after a successful save.
+  onSaved?: () => void;
 };
 
 const inputClass =
@@ -38,8 +41,16 @@ export function ApplicationForm({
   action,
   initialValues = EMPTY_VALUES,
   submitLabel,
+  onSaved,
 }: ApplicationFormProps) {
-  const [state, formAction, pending] = useActionState(action, {});
+  const [state, formAction, pending] = useActionState(
+    async (prevState: ApplicationFormState, formData: FormData) => {
+      const result = await action(prevState, formData);
+      if (result.success) onSaved?.();
+      return result;
+    },
+    {},
+  );
 
   // After a failed submit, show what the user typed rather than the original values.
   const values = state.values ?? initialValues;
@@ -47,6 +58,14 @@ export function ApplicationForm({
 
   return (
     <form action={formAction} className="grid gap-4 sm:grid-cols-2">
+      {/* The original advert travels with the form so it is saved alongside the record. */}
+      <input type="hidden" name="advert_text" value={values.advert_text} />
+      {errorFor("advert_text") && (
+        <p role="alert" className="text-sm text-red-600 sm:col-span-2">
+          {errorFor("advert_text")}
+        </p>
+      )}
+
       <Field label="Company" error={errorFor("company")}>
         <input name="company" required maxLength={200} defaultValue={values.company} className={inputClass} />
       </Field>

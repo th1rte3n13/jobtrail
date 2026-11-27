@@ -14,6 +14,7 @@ import {
 } from "@/lib/applications";
 import { createApplication } from "./actions";
 import { ApplicationForm } from "./application-form";
+import { AdvertImporter } from "./advert-importer";
 import { DeleteButton, StatusSelect } from "./card-controls";
 
 export default function DashboardPage() {
@@ -65,7 +66,14 @@ async function Dashboard() {
       </header>
 
       <details className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-        <summary className="cursor-pointer font-medium">Add an application</summary>
+        <summary className="cursor-pointer font-medium">Paste a job advert</summary>
+        <div className="mt-4">
+          <AdvertImporter />
+        </div>
+      </details>
+
+      <details className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <summary className="cursor-pointer font-medium">Add an application manually</summary>
         <div className="mt-4">
           <ApplicationForm action={createApplication} submitLabel="Add application" />
         </div>

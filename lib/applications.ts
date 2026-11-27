@@ -34,9 +34,14 @@ export type Application = {
   visa_notes: string | null;
   requirements: string[] | null;
   notes: string | null;
+  // Only selected where needed (the edit page); the board leaves it out because it can be long.
+  advert_text?: string | null;
   created_at: string;
   updated_at: string;
 };
+
+// CLAUDE.md rule 4; the database enforces the same limit.
+export const MAX_ADVERT_CHARS = 20000;
 
 // ---------- Form input ----------
 
@@ -51,6 +56,7 @@ export const FORM_FIELDS = [
   "visa_notes",
   "requirements",
   "notes",
+  "advert_text",
 ] as const;
 
 export type FormField = (typeof FORM_FIELDS)[number];
@@ -117,9 +123,58 @@ export const applicationSchema = z.object({
         .max(50, "At most 50 requirements."),
     ),
   notes: optionalText(5000),
+  // The original pasted advert, kept so you can refer back to it. Not shown as a visible field.
+  advert_text: z
+    .string()
+    .max(MAX_ADVERT_CHARS, `The advert must be at most ${MAX_ADVERT_CHARS} characters.`)
+    .transform((value) => (value.trim() === "" ? null : value)),
 });
 
 export type ApplicationInput = z.output<typeof applicationSchema>;
+
+// ---------- AI extraction result ----------
+
+// Claude's reply is untrusted: every field is checked here before it is shown or saved.
+const extractedText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullable()
+    .transform((value) => (value === "" ? null : value));
+
+export const extractedAdvertSchema = z.strictObject({
+  company: extractedText(200),
+  role_title: extractedText(200),
+  location: extractedText(200),
+  salary_text: extractedText(200),
+  deadline: z.iso.date().nullable(),
+  job_url: z.url({ protocol: /^https?$/ }).max(2000).nullable(),
+  visa_notes: extractedText(2000),
+  requirements: z.array(z.string().trim().min(1).max(500)).max(8),
+});
+
+export type ExtractedAdvert = z.output<typeof extractedAdvertSchema>;
+
+// Turn an extraction into form values so you can check and correct it before saving.
+export function extractedToFormValues(
+  extracted: ExtractedAdvert,
+  advertText: string,
+): FormValues {
+  return {
+    company: extracted.company ?? "",
+    role_title: extracted.role_title ?? "",
+    location: extracted.location ?? "",
+    salary_text: extracted.salary_text ?? "",
+    deadline: extracted.deadline ?? "",
+    status: "saved",
+    job_url: extracted.job_url ?? "",
+    visa_notes: extracted.visa_notes ?? "",
+    requirements: extracted.requirements.join("\n"),
+    notes: "",
+    advert_text: advertText,
+  };
+}
 
 export const idSchema = z.uuid();
 
@@ -136,6 +191,7 @@ export function toFormValues(application: Application): FormValues {
     visa_notes: application.visa_notes ?? "",
     requirements: (application.requirements ?? []).join("\n"),
     notes: application.notes ?? "",
+    advert_text: application.advert_text ?? "",
   };
 }
 

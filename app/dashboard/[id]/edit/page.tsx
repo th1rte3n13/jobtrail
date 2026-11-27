@@ -39,7 +39,7 @@ async function EditApplication({
   const { data } = await supabase
     .from("applications")
     .select(
-      "id, company, role_title, location, salary_text, deadline, status, job_url, visa_notes, requirements, notes, created_at, updated_at",
+      "id, company, role_title, location, salary_text, deadline, status, job_url, visa_notes, requirements, notes, advert_text, created_at, updated_at",
     )
     .eq("id", parsedId.data)
     .eq("user_id", user.id)
